@@ -41,12 +41,18 @@ class PySpikeInputModel(PyLoihiProcessModel):
         self.spikes_out.send(self.spikes)
 
 class MatMul(AbstractProcess):
+    '''
+    input: (B, N, M, K) 
+            (B, N, K, P)
+    output: (B, N, M, P)
+
+    '''
     def __init__(self, shape):
         super().__init__()
-        (M, N, K) = shape
-        self.mat_in_A = InPort(shape=(M, N))
-        self.mat_in_B = InPort(shape=(N, K))
-        self.mat_out = OutPort(shape=(M, K))
+        (B, N, M, K, P) = shape
+        self.mat_in_A = InPort(shape=(B, N, M, K))
+        self.mat_in_B = InPort(shape=(B, N, K, P))
+        self.mat_out = OutPort(shape=(B, N, M, P))
 
 @implements(proc=MatMul, protocol=LoihiProtocol)
 @requires(CPU)
@@ -66,14 +72,19 @@ class PyMatMulModel(PyLoihiProcessModel):
         self.mat_out.send(mat_result)
 
 class Linear(AbstractProcess):
+    '''
+    input: (TB, N, C)
+    output: (TB, N, C)
+    T = 1
+    '''
     def __init__(self, shape):
         super().__init__()
-        (B, M, N) = shape
+        (TB, N, C) = shape
         self.shape = shape
-        self.mat_in = InPort(shape=(B, M))
-        self.weight = Var(shape=(M, N), init=0)
-        self.bias = Var(shape=(N,), init=0)
-        self.mat_out = OutPort(shape=(B, N))
+        self.mat_in = InPort(shape=(TB, N, C))
+        self.weight = Var(shape=(C, C), init=0)
+        self.bias = Var(shape=(C,), init=0)
+        self.mat_out = OutPort(shape=(TB, N, C))
 
 @implements(proc=Linear, protocol=LoihiProtocol)
 @requires(CPU)
@@ -96,12 +107,19 @@ class PyLinearModel(PyLoihiProcessModel):
         self.mat_out.send(mat_out)
 
 class BatchNorm1d(AbstractProcess):
+    '''
+    input (TB, N, C)
+    output (TB, N, C)
+    normalize over C
+    T = 1
+    '''
+
     def __init__(self, shape):
         super().__init__()
-        (N, C, L) = shape
+        (TB, N, C) = shape
         self.shape = shape
-        self.mat_in = InPort(shape=(N, C, L))
-        self.mat_out = OutPort(shape=(N, C, L))
+        self.mat_in = InPort(shape=(TB, N, C))
+        self.mat_out = OutPort(shape=(TB, N, C))
 
 @implements(proc=BatchNorm1d, protocol=LoihiProtocol)
 @requires(CPU)
@@ -123,6 +141,13 @@ class PyBatchNorm1dModel(PyLoihiProcessModel):
         mat_out = self.bn(mat_in).detach().numpy()
         self.mat_out.send(mat_out)
 
+class MyLIF(AbstractProcess):
+    '''
+    input: (B, N, C)
+    output: (B, N, C)
+    B * N * C neurons
+    '''
+
 class Transpose(AbstractProcess):
     def __init__(self, shape):
         super().__init__()
@@ -143,12 +168,47 @@ class PyTransposeModel(PyLoihiProcessModel):
         mat_result = mat_in.T
         self.mat_out.send(mat_result)
 
+class SSA(AbstractProcess):
+    def __init__(self, shape):
+        super().__init__()
+        (TB, N, C) = shape
+        self.shape = shape
+        self.mat_in_x = InPort(shape=(TB, N, C))
+        self.mat_out = OutPort(shape=(TB, N, C))
+
+@implements(proc=SSA, protocol=LoihiProtocol)
+@requires(CPU)
+class PySSAModel(AbstractSubProcessModel):
+    def __init__(self, proc):
+
+        (TB, N, C) = proc.shape
+        self.linear_q = Linear(shape=proc.shape)
+        self.linear_k = Linear(shape=proc.shape)
+        self.linear_v = Linear(shape=proc.shape)
+        self.bn_q = BatchNorm1d(shape=proc.shape)
+        self.bn_k = BatchNorm1d(shape=proc.shape)
+        self.bn_v = BatchNorm1d(shape=proc.shape)
+        self.lif_q = LIF(shape=(TB, N, C))
+        self.lif_k = LIF(shape=(TB, N, C))
+        self.lif_v = LIF(shape=(TB, N, C))
+        self.attn_0 = MatMul(shape=(TB, N, C))
+
+        proc.mat_in_x.connect(self.linear_q.mat_in)
+        proc.mat_in_x.connect(self.linear_k.mat_in)
+        proc.mat_in_x.connect(self.linear_v.mat_in)
+        self.linear_q.mat_out.connect(self.bn_q.mat_in)
+        self.linear_k.mat_out.connect(self.bn_k.mat_in)
+        self.linear_v.mat_out.connect(self.bn_v.mat_in)
+        self.bn_q.mat_out.connect(self.lif_q.a_in)
+        self.bn_k.mat_out.connect(self.lif_k.a_in)
+        self.bn_v.mat_out.connect(self.lif_v.a_in)
 
 class SpikingSelfAttention(AbstractProcess):
     def __init__(self, shape):
         super().__init__()
         (N, dim) = shape
         self.shape = shape
+        # self.mat_in_x = InPort(shape=(N * dim,))
         # self.mat_in_q = InPort(shape=(N, dim))
         # self.mat_in_k = InPort(shape=(N, dim))
         # self.mat_in_v = InPort(shape=(N, dim))
@@ -420,7 +480,6 @@ def test_subprocess():
         print('\n ----- \n')
 
 def test_SSA():
-    monitor_output = Monitor()
     dim = (4, 3)
     proc = SpikingSelfAttention(shape=dim)
     output = OutputProcess(shape=dim)
