@@ -125,7 +125,7 @@ class Linear(AbstractProcess):
 @implements(proc=Linear, protocol=LoihiProtocol)
 @requires(CPU)
 class PyLinearModel(PyLoihiProcessModel):
-    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, float, precision=32)
+    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
     mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
     # weight: np.ndarray = LavaPyType(np.ndarray, float)
     # bias: np.ndarray = LavaPyType(np.ndarray, float)
@@ -135,6 +135,8 @@ class PyLinearModel(PyLoihiProcessModel):
         self.linear = nn.Linear(proc_params._parameters.get("shape")[2], proc_params._parameters.get("shape")[3])
         weight = proc_params._parameters.get("weight")
         bias = proc_params._parameters.get("bias")
+        assert weight.shape == self.linear.weight.data.shape
+        assert bias.shape == self.linear.bias.data.shape
         self.linear.weight.data = torch.from_numpy(weight).float()
         self.linear.bias.data = torch.from_numpy(bias).float()
 
@@ -466,10 +468,11 @@ class InputGenerator(AbstractProcess):
 @implements(proc=InputGenerator, protocol=LoihiProtocol)
 @requires(CPU)
 class PyInputGeneratorModel(PyLoihiProcessModel):
-    mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
+    mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, bool, precision=1)
 
     def run_spk(self):
-        mat_result = np.random.rand(self.mat_out.shape[0], self.mat_out.shape[1], self.mat_out.shape[2])
+        # randomly generate 0 or 1 for input
+        mat_result = np.random.randint(2, size=self.mat_out.shape).astype(np.bool_)
         self.mat_out.send(mat_result)
 
 class OutputReceiver(AbstractProcess):
@@ -483,8 +486,8 @@ class OutputReceiver(AbstractProcess):
 @implements(proc=OutputReceiver, protocol=LoihiProtocol)
 @requires(CPU)
 class PyOutputReceiverModel(PyLoihiProcessModel):
-    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, float, precision=32)
-    mat_result: np.ndarray = LavaPyType(np.ndarray, float)
+    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
+    mat_result: np.ndarray = LavaPyType(np.ndarray, bool)
 
     def run_spk(self):
         mat_in = self.mat_in.recv()
@@ -642,7 +645,7 @@ class OutputProcess(AbstractProcess):
 @implements(proc=OutputProcess, protocol=LoihiProtocol)
 @requires(CPU)
 class PyOutputProcessModel(PyLoihiProcessModel):
-    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, int, precision=32)
+    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
     mat_result: np.ndarray = LavaPyType(np.ndarray, int)
 
     def run_spk(self):
@@ -750,10 +753,6 @@ def test_whole_block():
 
     gamma = np.ones(shape[2])
     beta = np.zeros(shape[2])
-
-
-    # generate random input
-    input = np.random.rand(shape[0], shape[1], shape[2])
 
     this_block = SSA(shape=shape, 
                      weight_q_linear=weight, 
