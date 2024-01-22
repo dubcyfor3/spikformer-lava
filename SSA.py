@@ -42,7 +42,7 @@ class PySpikeInputModel(PyLoihiProcessModel):
 
 class MatMul_bool2float(AbstractProcess):
     '''
-    input: (B, N, M, K) 
+    input: (B, N, M, K)
             (B, N, K, P)
     output: (B, N, M, P)
 
@@ -75,7 +75,7 @@ class PyMatMulModel(PyLoihiProcessModel):
 
 class MatMul_floatbool2float(AbstractProcess):
     '''
-    input: (B, N, M, K) 
+    input: (B, N, M, K)
             (B, N, K, P)
     output: (B, N, M, P)
 
@@ -191,21 +191,27 @@ class PyBatchNorm1dModel(PyLoihiProcessModel):
 class Transpose(AbstractProcess):
     def __init__(self, shape):
         super().__init__()
-        self.shape = shape
-        (A, B, M, N) = shape
-        self.mat_in = InPort(shape=(A, B, M, N))
-        self.mat_out = OutPort(shape=(A, B, N, M))
+        self.dim = Var(shape=(1,), init=shape.__len__())
+        shape_out = [i for i in shape]
+        shape_out[-1], shape_out[-2] = shape_out[-2], shape_out[-1]
+        shape_out = tuple(shape_out)
+        self.mat_in = InPort(shape=shape)
+        self.mat_out = OutPort(shape=shape_out)
 
 @implements(proc=Transpose, protocol=LoihiProtocol)
 @requires(CPU)
 class PyTransposeModel(PyLoihiProcessModel):
+    dim: np.ndarray = LavaPyType(np.ndarray, int)
     mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, float, precision=32)
     mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
 
 
     def run_spk(self):
         mat_in = self.mat_in.recv()
-        mat_result = np.transpose(mat_in, (0, 1, 3, 2))
+        target_dim = [i for i in range(self.dim[0])]
+        target_dim[-1], target_dim[-2] = target_dim[-2], target_dim[-1]
+        target_dim = tuple(target_dim)
+        mat_result = np.transpose(mat_in, target_dim)
         self.mat_out.send(mat_result)
 
 class SplitMultiHead(AbstractProcess):
@@ -600,7 +606,7 @@ class LIF(AbstractProcess):
         super().__init__(**kwargs)
         shape = kwargs.get("shape", (1,))
         du = kwargs.pop("du", 0)
-        dv = kwargs.pop("dv", 0)
+        dv = kwargs.pop("dv", 0.5)
         bias_mant = kwargs.pop("bias_mant", 0)
         vth = kwargs.pop("vth", 1)
 
@@ -628,9 +634,8 @@ class PyLifModel(PyLoihiProcessModel):
 
     def run_spk(self):
         a_in_data = self.a_in.recv()
-        self.u[:] = self.u * (1 - self.du)
-        self.u[:] += a_in_data
-        self.v[:] = self.v * (1 - self.dv) + self.u + self.bias_mant
+        self.u[:] = a_in_data
+        self.v[:] = (self.v + self.u) * (1 - self.dv) + self.bias_mant
         s_out = self.v >= self.vth
         self.v[s_out] = 0  # Reset voltage to 0
         self.s_out.send(s_out)
@@ -754,14 +759,14 @@ def test_whole_block():
     gamma = np.ones(shape[2])
     beta = np.zeros(shape[2])
 
-    this_block = SSA(shape=shape, 
-                     weight_q_linear=weight, 
-                     bias_q_linear=bias, 
-                     weight_k_linear=weight, 
-                     bias_k_linear=bias, 
-                     weight_v_linear=weight, 
-                     bias_v_linear=bias, 
-                     weight_proj_linear=weight, 
+    this_block = SSA(shape=shape,
+                     weight_q_linear=weight,
+                     bias_q_linear=bias,
+                     weight_k_linear=weight,
+                     bias_k_linear=bias,
+                     weight_v_linear=weight,
+                     bias_v_linear=bias,
+                     weight_proj_linear=weight,
                      bias_proj_linear=bias,
                         beta_q_bn=beta,
                         gamma_q_bn=gamma,
@@ -770,9 +775,9 @@ def test_whole_block():
                         beta_v_bn=beta,
                         gamma_v_bn=gamma,
                         beta_proj_bn=beta,
-                        gamma_proj_bn=gamma, 
+                        gamma_proj_bn=gamma,
                      num_heads=num_heads)
-    
+
     input_process = InputGenerator(shape=shape)
     output_process = OutputReceiver(shape=shape)
     input_process.mat_out.connect(this_block.mat_in_x)
