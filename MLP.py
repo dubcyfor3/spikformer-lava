@@ -23,7 +23,7 @@ import torch.nn as nn
 from SSA import Linear, BatchNorm1d, LIF, InputGenerator, OutputReceiver
 
 class SpikingMLP(AbstractProcess):
-    
+
     def __init__(self, **kwargs):
         super().__init__()
         shape = kwargs.get("shape")
@@ -106,16 +106,16 @@ def test_MLP_block():
     fc2_bn_gamma = np.ones(shape[4])
     fc2_bn_beta = np.zeros(shape[4])
 
-    MLP_block = SpikingMLP(shape=shape, 
-                     fc1_linear_weight=fc1_linear_weight, 
-                     fc1_linear_bias=fc1_linear_bias, 
-                     fc2_linear_weight=fc2_linear_weight, 
-                     fc2_linear_bias=fc2_linear_bias, 
-                     fc1_bn_gamma=fc1_bn_gamma, 
-                     fc1_bn_beta=fc1_bn_beta, 
-                     fc2_bn_gamma=fc2_bn_gamma, 
+    MLP_block = SpikingMLP(shape=shape,
+                     fc1_linear_weight=fc1_linear_weight,
+                     fc1_linear_bias=fc1_linear_bias,
+                     fc2_linear_weight=fc2_linear_weight,
+                     fc2_linear_bias=fc2_linear_bias,
+                     fc1_bn_gamma=fc1_bn_gamma,
+                     fc1_bn_beta=fc1_bn_beta,
+                     fc2_bn_gamma=fc2_bn_gamma,
                      fc2_bn_beta=fc2_bn_beta)
-    
+
     input_process = InputGenerator(shape=(TB, N, C_input))
     output_process = OutputReceiver(shape=(TB, N, C_output))
 
