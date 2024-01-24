@@ -20,7 +20,7 @@ from lava.proc.monitor.process import Monitor
 import torch
 import torch.nn as nn
 
-from SSA import Linear, BatchNorm1d, LIF, InputGenerator, OutputReceiver
+from SSA import Linear, BatchNorm1d, LIF, InputGenerator, OutputReceiver, Residual
 
 class SpikingMLP(AbstractProcess):
 
@@ -69,13 +69,17 @@ class PySpikingMLPModel(AbstractSubProcessModel):
         self.fc2_bn = BatchNorm1d(shape=(TB, N, C_output), gamma=proc.fc2_bn_gamma, beta=proc.fc2_bn_beta)
         self.fc2_lif = LIF(shape=(TB, N, C_output))
 
+        self.residual = Residual(shape=(TB, N, C_input))
+
         proc.tensor_in_x.connect(self.fc1_linear.mat_in)
         self.fc1_linear.mat_out.connect(self.fc1_bn.mat_in)
         self.fc1_bn.mat_out.connect(self.fc1_lif.a_in)
         self.fc1_lif.s_out.connect(self.fc2_linear.mat_in)
         self.fc2_linear.mat_out.connect(self.fc2_bn.mat_in)
         self.fc2_bn.mat_out.connect(self.fc2_lif.a_in)
-        self.fc2_lif.s_out.connect(proc.tensor_out)
+        self.fc2_lif.s_out.connect(self.residual.tensor_in_x)
+        proc.tensor_in_x.connect(self.residual.tensor_in_x1)
+        self.residual.tensor_out.connect(proc.tensor_out)
 
         proc.vars.lif_fc1_u.alias(self.fc1_lif.vars.u)
         proc.vars.lif_fc1_v.alias(self.fc1_lif.vars.v)

@@ -20,6 +20,29 @@ from lava.proc.monitor.process import Monitor
 import torch
 import torch.nn as nn
 
+class Residual(AbstractProcess):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        shape = kwargs.get("shape")
+        self.tensor_in_x = InPort(shape=shape)
+        self.tensor_in_x1 = InPort(shape=shape)
+        self.tensor_out = OutPort(shape=shape)
+
+@implements(proc=Residual, protocol=LoihiProtocol)
+@requires(CPU)
+class PyResidualModel(PyLoihiProcessModel):
+    tensor_in_x: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
+    tensor_in_x1: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
+    tensor_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
+    def run_spk(self):
+        tensor_in_x = self.tensor_in_x.recv()
+        tensor_in_x1 = self.tensor_in_x1.recv()
+        tensor_in_x = torch.from_numpy(tensor_in_x).float()
+        tensor_in_x1 = torch.from_numpy(tensor_in_x1).float()
+        tensor_out = tensor_in_x + tensor_in_x1
+        tensor_out = tensor_out.detach().numpy()
+        self.tensor_out.send(tensor_out)
+
 class SpikeInput(AbstractProcess):
     """randomly generate spikes for input neurons"""
 
@@ -125,7 +148,7 @@ class Linear(AbstractProcess):
 @implements(proc=Linear, protocol=LoihiProtocol)
 @requires(CPU)
 class PyLinearModel(PyLoihiProcessModel):
-    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
+    mat_in: PyInPort = LavaPyType(PyInPort.VEC_DENSE, float, precision=32)
     mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
     # weight: np.ndarray = LavaPyType(np.ndarray, float)
     # bias: np.ndarray = LavaPyType(np.ndarray, float)
@@ -386,6 +409,7 @@ class PySSAModel(AbstractSubProcessModel):
         self.attn_1 = MatMul_floatbool2float(shape=(TB, proc.num_heads, N, N, C//proc.num_heads))
 
         self.concat_head = ConcatMultiHead(shape=(TB, N, C, proc.num_heads))
+        self.residual = Residual(shape=(TB, N, C))
 
         proc.mat_in_x.connect(self.linear_q.mat_in)
         proc.mat_in_x.connect(self.linear_k.mat_in)
@@ -417,7 +441,9 @@ class PySSAModel(AbstractSubProcessModel):
         self.lif_attn.s_out.connect(self.linear_proj.mat_in)
         self.linear_proj.mat_out.connect(self.bn_proj.mat_in)
         self.bn_proj.mat_out.connect(self.lif_proj.a_in)
-        self.lif_proj.s_out.connect(proc.mat_out)
+        self.lif_proj.s_out.connect(self.residual.tensor_in_x)
+        proc.mat_in_x.connect(self.residual.tensor_in_x1)
+        self.residual.tensor_out.connect(proc.mat_out)
 
         # setting alias of sub-processes
         proc.vars.lif_q_u.alias(self.lif_q.vars.u)
@@ -474,11 +500,11 @@ class InputGenerator(AbstractProcess):
 @implements(proc=InputGenerator, protocol=LoihiProtocol)
 @requires(CPU)
 class PyInputGeneratorModel(PyLoihiProcessModel):
-    mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, bool, precision=1)
+    mat_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
 
     def run_spk(self):
         # randomly generate 0 or 1 for input
-        mat_result = np.random.randint(2, size=self.mat_out.shape).astype(np.bool_)
+        mat_result = np.random.randint(2, size=self.mat_out.shape)
         self.mat_out.send(mat_result)
 
 class OutputReceiver(AbstractProcess):

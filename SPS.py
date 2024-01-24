@@ -20,7 +20,7 @@ from lava.proc.monitor.process import Monitor
 import torch
 import torch.nn as nn
 
-from SSA import LIF, Transpose
+from SSA import LIF, Transpose, Residual
 
 class BatchNorm2d(AbstractProcess):
     def __init__(self, **kwargs):
@@ -133,29 +133,6 @@ class PyMaxPool2DModel(PyLoihiProcessModel):
         tensor_in_x = torch.from_numpy(tensor_in_x).float()
         tensor_out= self.maxpool2d(tensor_in_x)
         tensor_out = tensor_out.bool()
-        tensor_out = tensor_out.detach().numpy()
-        self.tensor_out.send(tensor_out)
-
-class Residual(AbstractProcess):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        shape = kwargs.get("shape")
-        self.tensor_in_x = InPort(shape=shape)
-        self.tensor_in_x1 = InPort(shape=shape)
-        self.tensor_out = OutPort(shape=shape)
-
-@implements(proc=Residual, protocol=LoihiProtocol)
-@requires(CPU)
-class PyResidualModel(PyLoihiProcessModel):
-    tensor_in_x: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
-    tensor_in_x1: PyInPort = LavaPyType(PyInPort.VEC_DENSE, bool, precision=1)
-    tensor_out: PyOutPort = LavaPyType(PyOutPort.VEC_DENSE, float, precision=32)
-    def run_spk(self):
-        tensor_in_x = self.tensor_in_x.recv()
-        tensor_in_x1 = self.tensor_in_x1.recv()
-        tensor_in_x = torch.from_numpy(tensor_in_x).float()
-        tensor_in_x1 = torch.from_numpy(tensor_in_x1).float()
-        tensor_out = tensor_in_x + tensor_in_x1
         tensor_out = tensor_out.detach().numpy()
         self.tensor_out.send(tensor_out)
 
