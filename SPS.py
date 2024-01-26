@@ -158,7 +158,12 @@ class PyFlattenModel(PyLoihiProcessModel):
 
 
 class SPS(AbstractProcess):
+
     def __init__(self, **kwargs):
+        '''
+        input: (batch_size, in_channels, image_size_h, image_size_w),
+        output: (batch_size, image_size_h*image_size_w//16, embed_dims)
+        '''
         super().__init__()
         self.shape = kwargs.get("shape")
         (TB,) = self.shape
@@ -355,7 +360,6 @@ def test_SPS():
     in_channels = 3
     embed_dims = 256
 
-    # conv weight size is
     proj_conv_weight = np.random.rand(embed_dims//8, in_channels, 3, 3)
     proj_bn_gamma = np.ones(embed_dims//8)
     proj_bn_beta = np.zeros(embed_dims//8)
