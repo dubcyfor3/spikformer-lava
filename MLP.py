@@ -35,8 +35,12 @@ class SpikingMLP(AbstractProcess):
         self.fc2_linear_bias = kwargs.get("fc2_linear_bias")
         self.fc1_bn_gamma = kwargs.get("fc1_bn_gamma")
         self.fc1_bn_beta = kwargs.get("fc1_bn_beta")
+        self.fc1_bn_running_mean = kwargs.get("fc1_bn_running_mean")
+        self.fc1_bn_running_var = kwargs.get("fc1_bn_running_var")
         self.fc2_bn_gamma = kwargs.get("fc2_bn_gamma")
         self.fc2_bn_beta = kwargs.get("fc2_bn_beta")
+        self.fc2_bn_running_mean = kwargs.get("fc2_bn_running_mean")
+        self.fc2_bn_running_var = kwargs.get("fc2_bn_running_var")
 
         self.lif_fc1_u = Var(shape=(TB, N, C_hidden), init=0)
         self.lif_fc1_v = Var(shape=(TB, N, C_hidden), init=0)
@@ -62,11 +66,11 @@ class PySpikingMLPModel(AbstractSubProcessModel):
 
         (TB, N, C_input, C_hidden, C_output) = proc.shape
         self.fc1_linear = Linear(shape=(TB, N, C_input, C_hidden), weight=proc.fc1_linear_weight, bias=proc.fc1_linear_bias)
-        self.fc1_bn = BatchNorm1d(shape=(TB, N, C_hidden), gamma=proc.fc1_bn_gamma, beta=proc.fc1_bn_beta)
+        self.fc1_bn = BatchNorm1d(shape=(TB, N, C_hidden), gamma=proc.fc1_bn_gamma, beta=proc.fc1_bn_beta, running_mean=proc.fc1_bn_running_mean, running_var=proc.fc1_bn_running_var)
         self.fc1_lif = LIF(shape=(TB, N, C_hidden))
 
         self.fc2_linear = Linear(shape=(TB, N, C_hidden, C_output), weight=proc.fc2_linear_weight, bias=proc.fc2_linear_bias)
-        self.fc2_bn = BatchNorm1d(shape=(TB, N, C_output), gamma=proc.fc2_bn_gamma, beta=proc.fc2_bn_beta)
+        self.fc2_bn = BatchNorm1d(shape=(TB, N, C_output), gamma=proc.fc2_bn_gamma, beta=proc.fc2_bn_beta, running_mean=proc.fc2_bn_running_mean, running_var=proc.fc2_bn_running_var)
         self.fc2_lif = LIF(shape=(TB, N, C_output))
 
         self.residual = Residual(shape=(TB, N, C_input))

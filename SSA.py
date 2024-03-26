@@ -195,11 +195,18 @@ class PyBatchNorm1dModel(PyLoihiProcessModel):
     def __init__(self, proc_params):
         super().__init__(proc_params=proc_params)
         self.bn = nn.BatchNorm1d(proc_params._parameters.get("shape")[2])
+        # set to evaluation mode
+        self.bn.eval()
         beta = proc_params._parameters.get("beta")
         gamma = proc_params._parameters.get("gamma")
+        running_mean = proc_params._parameters.get("running_mean")
+        running_var = proc_params._parameters.get("running_var")
         # initialize the gamma and beta
         self.bn.weight.data = torch.from_numpy(gamma).float()
         self.bn.bias.data = torch.from_numpy(beta).float()
+        # initialize the running mean and running var
+        self.bn.running_mean = torch.from_numpy(running_mean).float()
+        self.bn.running_var = torch.from_numpy(running_var).float()
 
 
     def run_spk(self):
@@ -322,12 +329,20 @@ class SSA(AbstractProcess):
 
         self.q_bn_beta = kwargs.get("beta_q_bn")
         self.q_bn_gamma = kwargs.get("gamma_q_bn")
+        self.q_bn_running_mean = kwargs.get("running_mean_q_bn")
+        self.q_bn_running_var = kwargs.get("running_var_q_bn")
         self.k_bn_beta = kwargs.get("beta_k_bn")
         self.k_bn_gamma = kwargs.get("gamma_k_bn")
+        self.k_bn_running_mean = kwargs.get("running_mean_k_bn")
+        self.k_bn_running_var = kwargs.get("running_var_k_bn")
         self.v_bn_beta = kwargs.get("beta_v_bn")
         self.v_bn_gamma = kwargs.get("gamma_v_bn")
+        self.v_bn_running_mean = kwargs.get("running_mean_v_bn")
+        self.v_bn_running_var = kwargs.get("running_var_v_bn")
         self.proj_bn_beta = kwargs.get("beta_proj_bn")
         self.proj_bn_gamma = kwargs.get("gamma_proj_bn")
+        self.proj_bn_running_mean = kwargs.get("running_mean_proj_bn")
+        self.proj_bn_running_var = kwargs.get("running_var_proj_bn")
 
         # self.q_linear_weight = Var(shape=(C, C), init=q_linear_weight)
         # self.q_linear_bias = Var(shape=(C,), init=q_linear_bias)
@@ -388,10 +403,10 @@ class PySSAModel(AbstractSubProcessModel):
         self.linear_v = Linear(shape=(TB, N, C, C), weight=proc.v_linear_weight, bias=proc.v_linear_bias)
         self.linear_proj = Linear(shape=(TB, N, C, C), weight=proc.proj_linear_weight, bias=proc.proj_linear_bias)
 
-        self.bn_q = BatchNorm1d(shape=proc.shape, gamma = proc.q_bn_gamma, beta = proc.q_bn_beta)
-        self.bn_k = BatchNorm1d(shape=proc.shape, gamma = proc.k_bn_gamma, beta = proc.k_bn_beta)
-        self.bn_v = BatchNorm1d(shape=proc.shape, gamma = proc.v_bn_gamma, beta = proc.v_bn_beta)
-        self.bn_proj = BatchNorm1d(shape=proc.shape, gamma = proc.proj_bn_gamma, beta = proc.proj_bn_beta)
+        self.bn_q = BatchNorm1d(shape=proc.shape, gamma = proc.q_bn_gamma, beta = proc.q_bn_beta, running_mean = proc.q_bn_running_mean, running_var = proc.q_bn_running_var)
+        self.bn_k = BatchNorm1d(shape=proc.shape, gamma = proc.k_bn_gamma, beta = proc.k_bn_beta, running_mean = proc.k_bn_running_mean, running_var = proc.k_bn_running_var)
+        self.bn_v = BatchNorm1d(shape=proc.shape, gamma = proc.v_bn_gamma, beta = proc.v_bn_beta, running_mean = proc.v_bn_running_mean, running_var = proc.v_bn_running_var)
+        self.bn_proj = BatchNorm1d(shape=proc.shape, gamma = proc.proj_bn_gamma, beta = proc.proj_bn_beta, running_mean = proc.proj_bn_running_mean, running_var = proc.proj_bn_running_var)
 
         self.lif_q = LIF(shape=(TB, N, C))
         self.lif_k = LIF(shape=(TB, N, C))

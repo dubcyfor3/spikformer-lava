@@ -40,12 +40,17 @@ class PyBatchNorm2dModel(PyLoihiProcessModel):
         super().__init__(proc_params=proc_params)
         shape = proc_params._parameters.get("shape")
         self.bn = nn.BatchNorm2d(num_features=shape[1])
+        self.bn.eval()
         gamma = proc_params._parameters.get("gamma")
         beta = proc_params._parameters.get("beta")
+        running_mean = proc_params._parameters.get("running_mean")
+        running_var = proc_params._parameters.get("running_var")
         assert gamma.shape == self.bn.weight.data.shape
         assert beta.shape == self.bn.bias.data.shape
         self.bn.weight.data = torch.from_numpy(gamma).float()
         self.bn.bias.data = torch.from_numpy(beta).float()
+        self.bn.running_mean = torch.from_numpy(running_mean).float()
+        self.bn.running_var = torch.from_numpy(running_var).float()
 
     def run_spk(self):
         tensor_in_x = self.tensor_in_x.recv()
@@ -176,22 +181,32 @@ class SPS(AbstractProcess):
         self.proj_conv_weight = kwargs.get("proj_conv_weight")
         self.proj_bn_gamma = kwargs.get("proj_bn_gamma")
         self.proj_bn_beta = kwargs.get("proj_bn_beta")
+        self.proj_bn_running_mean = kwargs.get("proj_bn_running_mean")
+        self.proj_bn_running_var = kwargs.get("proj_bn_running_var")
 
         self.proj1_conv_weight = kwargs.get("proj1_conv_weight")
         self.proj1_bn_gamma = kwargs.get("proj1_bn_gamma")
         self.proj1_bn_beta = kwargs.get("proj1_bn_beta")
+        self.proj1_bn_running_mean = kwargs.get("proj1_bn_running_mean")
+        self.proj1_bn_running_var = kwargs.get("proj1_bn_running_var")
 
         self.proj2_conv_weight = kwargs.get("proj2_conv_weight")
         self.proj2_bn_gamma = kwargs.get("proj2_bn_gamma")
         self.proj2_bn_beta = kwargs.get("proj2_bn_beta")
+        self.proj2_bn_running_mean = kwargs.get("proj2_bn_running_mean")
+        self.proj2_bn_running_var = kwargs.get("proj2_bn_running_var")
 
         self.proj3_conv_weight = kwargs.get("proj3_conv_weight")
         self.proj3_bn_gamma = kwargs.get("proj3_bn_gamma")
         self.proj3_bn_beta = kwargs.get("proj3_bn_beta")
+        self.proj3_bn_running_mean = kwargs.get("proj3_bn_running_mean")
+        self.proj3_bn_running_var = kwargs.get("proj3_bn_running_var")
 
         self.rpe_conv_weight = kwargs.get("rpe_conv_weight")
         self.rpe_bn_gamma = kwargs.get("rpe_bn_gamma")
         self.rpe_bn_beta = kwargs.get("rpe_bn_beta")
+        self.rpe_bn_running_mean = kwargs.get("rpe_bn_running_mean")
+        self.rpe_bn_running_var = kwargs.get("rpe_bn_running_var")
 
         self.lif_proj_u = Var(shape=(TB, self.embed_dims//8, self.image_size_h, self.image_size_w), init=0)
         self.lif_proj_v = Var(shape=(TB, self.embed_dims//8, self.image_size_h, self.image_size_w), init=0)
@@ -238,25 +253,25 @@ class PySPSModel(AbstractSubProcessModel):
         (TB,) = proc.shape
 
         self.proj_conv = Conv2D_init(shape=(TB, proc.in_channels, proc.embed_dims//8, proc.image_size_h, proc.image_size_w), weight=proc.proj_conv_weight)
-        self.proj_bn = BatchNorm2d(shape=(TB, proc.embed_dims//8, proc.image_size_h, proc.image_size_w), gamma=proc.proj_bn_gamma, beta=proc.proj_bn_beta)
+        self.proj_bn = BatchNorm2d(shape=(TB, proc.embed_dims//8, proc.image_size_h, proc.image_size_w), gamma=proc.proj_bn_gamma, beta=proc.proj_bn_beta, running_mean=proc.proj_bn_running_mean, running_var=proc.proj_bn_running_mean)
         self.proj_lif = LIF(shape=(TB, proc.embed_dims//8, proc.image_size_h, proc.image_size_w))
 
         self.proj1_conv = Conv2D(shape=(TB, proc.embed_dims//8, proc.embed_dims//4, proc.image_size_h, proc.image_size_w), weight=proc.proj1_conv_weight)
-        self.proj1_bn = BatchNorm2d(shape=(TB, proc.embed_dims//4, proc.image_size_h, proc.image_size_w), gamma=proc.proj1_bn_gamma, beta=proc.proj1_bn_beta)
+        self.proj1_bn = BatchNorm2d(shape=(TB, proc.embed_dims//4, proc.image_size_h, proc.image_size_w), gamma=proc.proj1_bn_gamma, beta=proc.proj1_bn_beta, running_mean=proc.proj1_bn_running_mean, running_var=proc.proj1_bn_running_mean)
         self.proj1_lif = LIF(shape=(TB, proc.embed_dims//4, proc.image_size_h, proc.image_size_w))
 
         self.proj2_conv = Conv2D(shape=(TB, proc.embed_dims//4, proc.embed_dims//2, proc.image_size_h, proc.image_size_w), weight=proc.proj2_conv_weight)
-        self.proj2_bn = BatchNorm2d(shape=(TB, proc.embed_dims//2, proc.image_size_h, proc.image_size_w), gamma=proc.proj2_bn_gamma, beta=proc.proj2_bn_beta)
+        self.proj2_bn = BatchNorm2d(shape=(TB, proc.embed_dims//2, proc.image_size_h, proc.image_size_w), gamma=proc.proj2_bn_gamma, beta=proc.proj2_bn_beta, running_mean=proc.proj2_bn_running_mean, running_var=proc.proj2_bn_running_mean)
         self.proj2_lif = LIF(shape=(TB, proc.embed_dims//2, proc.image_size_h, proc.image_size_w))
         self.maxpool2 = MaxPool2D(shape=(TB, proc.embed_dims//2, proc.image_size_h, proc.image_size_w, proc.image_size_h//2, proc.image_size_w//2))
 
         self.proj3_conv = Conv2D(shape=(TB, proc.embed_dims//2, proc.embed_dims, proc.image_size_h//2, proc.image_size_w//2), weight=proc.proj3_conv_weight)
-        self.proj3_bn = BatchNorm2d(shape=(TB, proc.embed_dims, proc.image_size_h//2, proc.image_size_w//2), gamma=proc.proj3_bn_gamma, beta=proc.proj3_bn_beta)
+        self.proj3_bn = BatchNorm2d(shape=(TB, proc.embed_dims, proc.image_size_h//2, proc.image_size_w//2), gamma=proc.proj3_bn_gamma, beta=proc.proj3_bn_beta, running_mean=proc.proj3_bn_running_mean, running_var=proc.proj3_bn_running_mean)
         self.proj3_lif = LIF(shape=(TB, proc.embed_dims, proc.image_size_h//2, proc.image_size_w//2))
         self.maxpool3 = MaxPool2D(shape=(TB, proc.embed_dims, proc.image_size_h//2, proc.image_size_w//2, proc.image_size_h//4, proc.image_size_w//4))
 
         self.rpe_conv = Conv2D(shape=(TB, proc.embed_dims, proc.embed_dims, proc.image_size_h//4, proc.image_size_w//4), weight=proc.rpe_conv_weight)
-        self.rpe_bn = BatchNorm2d(shape=(TB, proc.embed_dims, proc.image_size_h//4, proc.image_size_w//4), gamma=proc.rpe_bn_gamma, beta=proc.rpe_bn_beta)
+        self.rpe_bn = BatchNorm2d(shape=(TB, proc.embed_dims, proc.image_size_h//4, proc.image_size_w//4), gamma=proc.rpe_bn_gamma, beta=proc.rpe_bn_beta, running_mean=proc.rpe_bn_running_mean, running_var=proc.rpe_bn_running_mean)
         self.rpe_lif = LIF(shape=(TB, proc.embed_dims, proc.image_size_h//4, proc.image_size_w//4))
 
         self.residual = Residual(shape=(TB, proc.embed_dims, proc.image_size_h//4, proc.image_size_w//4))
