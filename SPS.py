@@ -404,18 +404,28 @@ def test_SPS():
                     proj_conv_weight=proj_conv_weight,
                     proj_bn_gamma=proj_bn_gamma,
                     proj_bn_beta=proj_bn_beta,
+                    proj_bn_running_var=proj_bn_gamma,
+                    proj_bn_running_mean=proj_bn_beta,
                     proj1_conv_weight=proj1_conv_weight,
                     proj1_bn_gamma=proj1_bn_gamma,
                     proj1_bn_beta=proj1_bn_beta,
+                    proj1_bn_running_var=proj1_bn_gamma,
+                    proj1_bn_running_mean=proj1_bn_beta,
                     proj2_conv_weight=proj2_conv_weight,
                     proj2_bn_gamma=proj2_bn_gamma,
                     proj2_bn_beta=proj2_bn_beta,
+                    proj2_bn_running_var=proj2_bn_gamma,
+                    proj2_bn_running_mean=proj2_bn_beta,
                     proj3_conv_weight=proj3_conv_weight,
                     proj3_bn_gamma=proj3_bn_gamma,
                     proj3_bn_beta=proj3_bn_beta,
+                    proj3_bn_running_var=proj3_bn_gamma,
+                    proj3_bn_running_mean=proj3_bn_beta,
                     rpe_conv_weight=rpe_conv_weight,
                     rpe_bn_gamma=rpe_bn_gamma,
-                    rpe_bn_beta=rpe_bn_beta)
+                    rpe_bn_beta=rpe_bn_beta,
+                    rpe_bn_running_var=rpe_bn_gamma,
+                    rpe_bn_running_mean=rpe_bn_beta)
 
     input_process = InputGenerator(shape=(shape[0], in_channels, image_size_h, image_size_w))
     output_process = OutputReceiver(shape=(shape[0], image_size_h*image_size_w//16, embed_dims))
@@ -432,6 +442,7 @@ def test_SPS():
         print('this_block result: ', output_process.tensor_result.get())
         print('\n ----- \n')
 
+    SPS_block.stop()
 
 if __name__ == "__main__":
     test_SPS()
