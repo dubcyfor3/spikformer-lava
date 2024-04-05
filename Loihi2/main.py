@@ -99,6 +99,84 @@ class CSpikeGeneratorqkv8Model(CLoihiProcessModel):
     def source_file_name(self):
         return "spike_generator_qkv8.c"
     
+class SpikingSelfAttention8(AbstractProcess):
+    def __init__(self, channel_dim, num_heads):
+        super().__init__()
+        self.num_heads = Var(shape=(1,), init=num_heads)
+        self.spikes_in_q_0 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_1 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_2 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_3 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_4 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_5 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_6 = InPort(shape=(channel_dim,))
+        self.spikes_in_q_7 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_0 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_1 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_2 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_3 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_4 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_5 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_6 = InPort(shape=(channel_dim,))
+        self.spikes_in_k_7 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_0 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_1 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_2 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_3 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_4 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_5 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_6 = InPort(shape=(channel_dim,))
+        self.spikes_in_v_7 = InPort(shape=(channel_dim,))
+        self.spikes_out_0 = OutPort(shape=(channel_dim,))
+        self.spikes_out_1 = OutPort(shape=(channel_dim,))
+        self.spikes_out_2 = OutPort(shape=(channel_dim,))
+        self.spikes_out_3 = OutPort(shape=(channel_dim,))
+        self.spikes_out_4 = OutPort(shape=(channel_dim,))
+        self.spikes_out_5 = OutPort(shape=(channel_dim,))
+        self.spikes_out_6 = OutPort(shape=(channel_dim,))
+        self.spikes_out_7 = OutPort(shape=(channel_dim,))
+
+@implements(proc=SpikingSelfAttention8, protocol=LoihiProtocol)
+@requires(LMT)
+class CSpikingSelfAttention8Model(CLoihiProcessModel):
+    num_heads: Var = LavaCType(cls=int, d_type=LavaCDataType.INT32)
+    spikes_in_q_0: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_1: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_2: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_3: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_4: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_5: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_6: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_q_7: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_0: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_1: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_2: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_3: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_4: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_5: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_6: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_k_7: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_0: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_1: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_2: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_3: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_4: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_5: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_6: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_in_v_7: CInPort = LavaCType(cls=CInPort, d_type=LavaCDataType.INT32)
+    spikes_out_0: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_1: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_2: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_3: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_4: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_5: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_6: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+    spikes_out_7: COutPort = LavaCType(cls=COutPort, d_type=LavaCDataType.INT32)
+
+    @property
+    def source_file_name(self):
+        return "spiking_self_attention_8.c"
+
 
 class SpikeAdapter8to1(AbstractProcess):
     def __init__(self, channel_dim):
@@ -204,12 +282,15 @@ def test_mini_spikformer():
     input_process = SpikeGeneratorqkv8(channle_dim=embedding_dimension, spike_prob=50)
 
     block_list_SSA = []
+    block_list_C_proc = []
     block_list_MLP = []
     for block_idx in range(depth):
         batch_list_SSA = []
+        batch_list_C_proc = []
         batch_list_MLP = []
         for batch_idx in range(batch_size):
             sequence_list_SSA = []
+            sequence_list_C_proc = []
             sequence_list_MLP = []
             for sequence_idx in range(sequence_length):
                 process_pack_SSA = []
@@ -231,9 +312,14 @@ def test_mini_spikformer():
                 sequence_list_SSA.append(process_pack_SSA)
                 process_pack_MLP = []
                 sequence_list_MLP.append(process_pack_MLP)
+
+            ssa = SpikingSelfAttention8(channel_dim=embedding_dimension, num_heads=2)
+            sequence_list_C_proc.append(ssa)
             batch_list_SSA.append(sequence_list_SSA)
+            batch_list_C_proc.append(sequence_list_C_proc)
             batch_list_MLP.append(sequence_list_MLP)
         block_list_MLP.append(batch_list_MLP)
+        block_list_C_proc.append(batch_list_C_proc)
         block_list_SSA.append(batch_list_SSA)
 
     input_process.s_out_q_0.connect(block_list_SSA[0][0][0][0].spikes_in)
@@ -262,6 +348,33 @@ def test_mini_spikformer():
     input_process.s_out_v_5.connect(block_list_SSA[0][0][5][2].spikes_in)
     input_process.s_out_v_6.connect(block_list_SSA[0][0][6][2].spikes_in)
     input_process.s_out_v_7.connect(block_list_SSA[0][0][7][2].spikes_in)
+
+    block_list_SSA[0][0][0][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_0)
+    block_list_SSA[0][0][1][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_1)
+    block_list_SSA[0][0][2][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_2)
+    block_list_SSA[0][0][3][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_3)
+    block_list_SSA[0][0][4][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_4)
+    block_list_SSA[0][0][5][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_5)
+    block_list_SSA[0][0][6][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_6)
+    block_list_SSA[0][0][7][0].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_q_7)
+
+    block_list_SSA[0][0][0][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_0)
+    block_list_SSA[0][0][1][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_1)
+    block_list_SSA[0][0][2][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_2)
+    block_list_SSA[0][0][3][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_3)
+    block_list_SSA[0][0][4][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_4)
+    block_list_SSA[0][0][5][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_5)
+    block_list_SSA[0][0][6][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_6)
+    block_list_SSA[0][0][7][1].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_k_7)
+
+    block_list_SSA[0][0][0][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_0)
+    block_list_SSA[0][0][1][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_1)
+    block_list_SSA[0][0][2][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_2)
+    block_list_SSA[0][0][3][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_3)
+    block_list_SSA[0][0][4][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_4)
+    block_list_SSA[0][0][5][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_5)
+    block_list_SSA[0][0][6][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_6)
+    block_list_SSA[0][0][7][2].spikes_out.connect(block_list_C_proc[0][0][0].spikes_in_v_7)
 
     run_cfg = Loihi2HwCfg(select_sub_proc_model=True)
     profiler = Profiler.init(run_cfg)
