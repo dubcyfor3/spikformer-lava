@@ -246,5 +246,3 @@ def spikformer(pretrained=False, **kwargs):
     )
     model.default_cfg = _cfg()
     return model
-
-
